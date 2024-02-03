@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  docker-monitor:
+    image: yourusername/docker-monitor:latest
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    restart: unless-stopped

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 )
@@ -46,17 +47,20 @@ func monitorDockerEvents(cli *client.Client) {
 	}
 }
 
-func handleDockerEvent(event types.EventsMessage) {
-	// Simplified logic to detect crash-looping containers
+func handleDockerEvent(event events.Message) {
+	containerID := event.Actor.ID
+	containerName := event.Actor.Attributes["name"]
+	exitCode := event.Actor.Attributes["exitCode"] // Extracting the exit code
+
+	// Update the metric for all container stops/restarts
+	containerStopRestartCounter.WithLabelValues(containerID, containerName, exitCode).Inc()
+
 	if event.Action == "die" {
-		containerID := event.Actor.ID
-		containerName := event.Actor.Attributes["name"]
 		if state, exists := containerStates[containerID]; exists {
-			// Check if the container has restarted within a short time frame
-			if state.lastState == "died" && time.Since(state.lastUpdateTime).Minutes() < 5 {
+			if state.lastState == "started" && time.Since(state.lastUpdateTime).Minutes() < 5 {
 				// This is a simplistic way to identify a crash-loop
-				log.Printf("Container %s (%s) is potentially crash-looping", containerName, containerID)
-				UpdateCrashLoopMetric(containerID, containerName)
+				log.Printf("Container %s (%s) is potentially crash-looping with exit code: %s", containerName, containerID, exitCode)
+				UpdateCrashLoopMetric(containerID, containerName, exitCode)
 			}
 			state.restartCount++
 			state.lastState = "died"
