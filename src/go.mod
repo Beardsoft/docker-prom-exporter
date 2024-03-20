@@ -3,7 +3,7 @@ module github.com/maestroi/docker-prom-exporter
 go 1.19
 
 require (
-	github.com/docker/docker v25.0.2+incompatible
+	github.com/docker/docker v25.0.5+incompatible
 	github.com/prometheus/client_golang v1.18.0
 )
 
